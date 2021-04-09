@@ -13,13 +13,13 @@ def generate_launch_description():
         "example.yaml",
     )
 
-    arduino_server = Node(
+    alicat_flow_controller = Node(
         package="alicat_airflow_driver",
         executable="alicat_airflow_server",
         name="airflow_server",
         parameters=[config],
     )
-    ld.add_action(arduino_server)
+    ld.add_action(alicat_flow_controller)
 
     test_client = Node(
         package="alicat_airflow_driver",

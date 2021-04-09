@@ -24,6 +24,7 @@ setup(
         "console_scripts": [
             "alicat_airflow_server = alicat_airflow_driver.alicat_airflow_server:main",
             "example_airflow_client = alicat_airflow_driver.example_airflow_client:main",
+            "alicat_strokedata_subscriber = alicat_airflow_driver.alicat_strokedata_subscriber:main",
         ],
     },
 )
