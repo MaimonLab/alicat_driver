@@ -8,22 +8,22 @@ def generate_launch_description():
     ld = LaunchDescription()
 
     config = os.path.join(
-        get_package_share_directory("alicat_airflow_driver"),
+        get_package_share_directory("alicat_driver"),
         "config",
         "example.yaml",
     )
 
     alicat_flow_controller = Node(
-        package="alicat_airflow_driver",
-        executable="alicat_airflow_server",
+        package="alicat_driver",
+        executable="alicat_server",
         name="airflow_server",
         parameters=[config],
     )
     ld.add_action(alicat_flow_controller)
 
     test_client = Node(
-        package="alicat_airflow_driver",
-        executable="example_airflow_client",
+        package="alicat_driver",
+        executable="example_alicat_client",
         name="airflow_client",
         parameters=[config],
     )
