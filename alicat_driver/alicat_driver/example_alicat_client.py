@@ -3,7 +3,12 @@
 import rclpy
 from rclpy.node import Node
 import time
-from strokeflow_interfaces.srv import SetFlowRate
+
+
+# from strokeflow_interfaces.srv import SetFlowRate
+from alicat_driver_interfaces.srv import SetFlowRate
+
+from typing import Optional
 
 
 class AirflowTestClient(Node):
@@ -11,9 +16,6 @@ class AirflowTestClient(Node):
         super().__init__("airflow_test_client")
 
         # see if config_found parameter is found in yaml file
-        self.declare_parameter("config_found", False)
-        config_found = self.get_parameter("config_found").value
-        self.get_logger().info(f"Config found: {config_found}")
 
         self.flow_rate_client = self.create_client(SetFlowRate, "/set_flow_rate")
         while not self.flow_rate_client.wait_for_service(timeout_sec=1.0):
