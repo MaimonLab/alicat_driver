@@ -4,6 +4,7 @@ import rclpy
 from rclpy.node import Node
 from alicat import FlowController
 from alicat_driver_interfaces.srv import SetFlowRate
+from alicat_driver_interfaces.msg import FlowRate
 import time
 import serial.tools.list_ports
 from typing import Optional
@@ -24,7 +25,12 @@ def find_port_for_serial(serial_id: str) -> Optional[str]:
 class FlowControllerNode(Node):
     def __init__(self):
         super().__init__("flow_controller_node")
-        default_param = {"serial_port": None, "device_serial_number": None}
+        default_param = {
+            "serial_port": None,
+            "device_serial_number": None,
+            "subscribe_flowrate_topic": True,
+            "flowrate_topic": "alicat/flow_rate",
+        }
 
         for key, value in default_param.items():
             if not self.has_parameter(key):
@@ -77,6 +83,23 @@ class FlowControllerNode(Node):
             self.flow_controller = FlowController()
 
         self.create_service(SetFlowRate, "set_flow_rate", self.set_flow_rate_callback)
+
+        if self.get_parameter("subscribe_flowrate_topic").value:
+            flowrate_topic = self.get_parameter("flowrate_topic").value
+            self.create_subscription(
+                FlowRate, flowrate_topic, self.flowrate_callback, 1
+            )
+
+    def flowrate_callback(self, flowrate_msg):
+
+        raw_flowrate = flowrate_msg.flow_rate
+
+        if raw_flowrate < 0:
+            apply_flowrate = 0
+        else:
+            apply_flowrate = raw_flowrate
+
+        self.flow_controller.set_flow_rate(apply_flowrate)
 
     def set_flow_rate_callback(self, request, response):
 
