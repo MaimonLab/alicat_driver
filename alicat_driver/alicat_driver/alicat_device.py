@@ -23,6 +23,29 @@ def find_port_for_serial(serial_id: str) -> Optional[str]:
     return None
 
 
+def get_alicat_port():
+
+    ports = list(serial.tools.list_ports.comports())
+
+    for port in ports:
+        if port.manufacturer == "FTDI":
+            return port.device
+    return None
+
+
+def find_alicat_serial_from_port(flow_controller):
+
+    flow_controller_data = flow_controller.open_ports
+    for key, item in flow_controller_data.items():
+
+        ports = list(serial.tools.list_ports.comports())
+        for port in ports:
+            if port.device == item[0].port:
+                found_serial_number = port.serial_number
+                return found_serial_number
+    return None
+
+
 class FlowControllerNode(Node):
     def __init__(self):
         super().__init__("flow_controller_node")
@@ -60,28 +83,25 @@ class FlowControllerNode(Node):
             elif self.port_from_param:
                 self.get_logger().info(f"Port from param: {self.port_from_param}")
                 self.flow_controller = FlowController(self.port_from_param)
+                found_serial_number = find_alicat_serial_from_port(self.flow_controller)
                 self.get_logger().info(
-                    f"Opened Flow controller in port: {self.port_from_param}"
+                    f"Opened Flow controller in port: {self.port_from_param} with s/n {found_serial_number}"
                 )
             else:
                 ports = list(serial.tools.list_ports.comports())
+                port = get_alicat_port()
+
+                if port is None:
+                    raise FileNotFoundError(b"Cannot find alicat device")
                 self.flow_controller = FlowController(ports[0].device)
 
-                flow_controller_data = self.flow_controller.open_ports
-                for key, item in flow_controller_data.items():
-
-                    ports = list(serial.tools.list_ports.comports())
-                    for port in ports:
-                        if port.device == item[0].port:
-                            found_serial_number = port.serial_number
-                            break
+                found_serial_number = find_alicat_serial_from_port(self.flow_controller)
 
                 self.get_logger().warn(
                     f"No port or serial number specified. Opening device with serial {found_serial_number}"
                 )
 
         flowrate_service = self.get_parameter("flowrate_service").value
-        # flowrate_service_w_name = f"{self.get_name()}/{flowrate_service}"
 
         self.create_service(SetFlowRate, flowrate_service, self.set_flow_rate_callback)
 
