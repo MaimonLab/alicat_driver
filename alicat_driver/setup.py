@@ -22,7 +22,7 @@ setup(
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
-            "alicat_server = alicat_driver.alicat_server:main",
+            "alicat_device = alicat_driver.alicat_device:main",
             "example_alicat_client = alicat_driver.example_alicat_client:main",
             "list_ports = alicat_driver.list_ports:main",
         ],

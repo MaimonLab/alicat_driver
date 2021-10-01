@@ -1,0 +1,8 @@
+alicat_device:
+  ros__parameters:
+    flowrate_service: alicat_device/flowrate_service
+    device_port: /dev/ttyUSB0
+
+alicat_client:
+  ros__parameters:
+    flowrate_service: alicat_device/flowrate_service
