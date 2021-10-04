@@ -69,7 +69,6 @@ class FlowControllerNode(Node):
             self.device_serial_number = self.device_serial_number.replace("$", "")
 
         with self.log_error_if_unavailable():
-            # if True:
             if self.device_serial_number:
                 port_to_try = find_port_for_serial(self.device_serial_number)
                 if port_to_try is None:
@@ -78,9 +77,7 @@ class FlowControllerNode(Node):
                 self.get_logger().info(
                     f"Opened Alicat w s/n: {self.device_serial_number} on {port_to_try}"
                 )
-                # self.get_logger().info(f"On port: {port_to_try}")
             elif self.port_from_param:
-                self.get_logger().info(f"Port from param: {self.port_from_param}")
                 self.flow_controller = FlowController(self.port_from_param)
                 found_serial_number = find_alicat_serial_from_port(self.flow_controller)
                 self.get_logger().info(
@@ -92,6 +89,7 @@ class FlowControllerNode(Node):
 
                 if port is None:
                     raise FileNotFoundError(b"Cannot find alicat device")
+
                 self.flow_controller = FlowController(ports[0].device)
 
                 found_serial_number = find_alicat_serial_from_port(self.flow_controller)
@@ -124,7 +122,7 @@ class FlowControllerNode(Node):
     def set_flow_rate_callback(self, request, response):
 
         self.flow_controller.set_flow_rate(request.goal_flow_rate)
-        time.sleep(0.4)
+        time.sleep(0.1)
         flow_status = self.flow_controller.get()
 
         response.measured_flow_rate = flow_status["volumetric_flow"]
