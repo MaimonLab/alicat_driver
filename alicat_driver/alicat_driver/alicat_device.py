@@ -68,7 +68,6 @@ class FlowControllerNode(Node):
         if self.device_serial_number:
             self.device_serial_number = self.device_serial_number.replace("$", "")
 
-        self.mock_serial_used = False
         with self.log_error_if_unavailable():
             # if True:
             if self.device_serial_number:
@@ -113,26 +112,24 @@ class FlowControllerNode(Node):
 
     def flowrate_callback(self, flowrate_msg):
 
-        if not self.mock_serial_used:
-            raw_flowrate = flowrate_msg.flow_rate
+        raw_flowrate = flowrate_msg.flow_rate
 
-            if raw_flowrate < 0:
-                apply_flowrate = 0
-            else:
-                apply_flowrate = raw_flowrate
+        if raw_flowrate < 0:
+            apply_flowrate = 0
+        else:
+            apply_flowrate = raw_flowrate
 
-            self.flow_controller.set_flow_rate(apply_flowrate)
+        self.flow_controller.set_flow_rate(apply_flowrate)
 
     def set_flow_rate_callback(self, request, response):
-        if not self.mock_serial_used:
 
-            self.flow_controller.set_flow_rate(request.goal_flow_rate)
-            time.sleep(0.4)
-            flow_status = self.flow_controller.get()
+        self.flow_controller.set_flow_rate(request.goal_flow_rate)
+        time.sleep(0.4)
+        flow_status = self.flow_controller.get()
 
-            response.measured_flow_rate = flow_status["volumetric_flow"]
-            response.measured_pressure = flow_status["volumetric_flow"]
-            response.measured_temperature = flow_status["temperature"]
+        response.measured_flow_rate = flow_status["volumetric_flow"]
+        response.measured_pressure = flow_status["volumetric_flow"]
+        response.measured_temperature = flow_status["temperature"]
         return response
 
     @contextmanager
@@ -154,8 +151,9 @@ class FlowControllerNode(Node):
                     f"Failed opening Alicat device. No free device is not found."
                 )
 
-            self.get_logger().error(f"Using MOCK alicat! ")
-            self.mock_serial_used = True
+            self.get_logger().error(f"Closing alicat node! ")
+
+            exit()
 
 
 def main():

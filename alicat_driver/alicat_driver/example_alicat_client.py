@@ -30,8 +30,18 @@ class AirflowTestClient(Node):
         flow_rate_service = self.get_parameter("flowrate_service").value
         self.flow_rate_client = self.create_client(SetFlowRate, flow_rate_service)
 
-        while not self.flow_rate_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info("flow rate service not available, waiting..")
+        # while not self.flow_rate_client.wait_for_service(timeout_sec=1.0):
+        #     self.get_logger().info("flow rate service not available, waiting..")
+
+        counter = 0
+        while not self.flow_rate_client.wait_for_service(timeout_sec=3.0):
+            self.get_logger().warn("flow rate service not available, waiting..")
+            counter += 1
+            if counter >= 3:
+                self.get_logger().error(
+                    f"Could not connect to service: {flow_rate_service}, closing node"
+                )
+                exit()
 
         flowrate_topic = self.get_parameter("flowrate_topic").value
         self.pub = self.create_publisher(FlowRate, flowrate_topic, 1)
@@ -53,7 +63,6 @@ def main(args=None):
 
     minimal_client = AirflowTestClient()
 
-    # while True:
     # for flow_rate in [0.3, 0.6, 0.8]:
     for flow_rate in np.arange(1, 0, -0.1):
         minimal_client.set_flow_rate(goal_flow_rate=flow_rate)
