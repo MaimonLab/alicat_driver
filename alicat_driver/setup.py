@@ -17,7 +17,7 @@ setup(
     zip_safe=True,
     maintainer="maimon",
     maintainer_email="tlmohren@gmail.com",
-    description="TODO: Package description",
+    description="Node to interact with Alicat device, tested with MC-series",
     license="LGPLv3",
     tests_require=["pytest"],
     entry_points={

@@ -1,6 +1,14 @@
 import serial.tools.list_ports
 from typing import List
 
+"""list_ports 
+
+Script to list all devices connected to a com port. 
+Can be run with:
+- python3 list_ports.py 
+- ros2 run alicat_driver list_ports
+"""
+
 
 def list_ports_serial() -> List:
     """Returns list of port with manufacturer and serial"""

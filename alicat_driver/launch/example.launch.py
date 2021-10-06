@@ -1,9 +1,7 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
-import os
 import glob
-
 import ruamel.yaml
 
 ruamel_yaml = ruamel.yaml.YAML(typ="safe")
@@ -61,7 +59,7 @@ def generate_launch_description():
     )
     ld.add_action(mcc_device)
 
-    # if a second_mcc_device is found in the config, add it to the launch
+    # if a second_alicat_device is found in the config, add it to the launch
     with open(selected_config_file, "r") as yaml_file:
 
         example_config = ruamel_yaml.load(yaml_file)
@@ -74,6 +72,7 @@ def generate_launch_description():
         )
         ld.add_action(second_mcc_device)
 
+    # if a second_alicat_client is found in the config, add it to the launch
     if "second_alicat_client" in example_config:
         second_mcc_device = Node(
             package="alicat_driver",

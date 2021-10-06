@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
 
+"""alicat_device
+ROS2 node to send flowrate on an alicat flow rate device. 
+Parameters: 
+- device_port: port, e.g. /dev/ttyUSB0 to open the device. Serial number is prefered since ports change.
+- device_serial_number: serial number of the device to open, takes precedence over device_port.
+- subscribe_flow_rate: option to open a subscription, if false the flowrate can only be set with services. 
+- flowrate_topic: topic name that the node will subscribe to. 
+- flowrate_service: service name that the node will provide. 
+"""
+
 import rclpy
 from rclpy.node import Node
 from alicat import FlowController
@@ -24,6 +34,8 @@ def find_port_for_serial(serial_id: str) -> Optional[str]:
 
 
 def get_alicat_port():
+    """Loops through ports and sees if any device is manufactured by FTDI,
+    which is the chip which the alicat comports devices use"""
 
     ports = list(serial.tools.list_ports.comports())
 
@@ -34,13 +46,15 @@ def get_alicat_port():
 
 
 def find_alicat_serial_from_port(flow_controller):
+    """For an opened alicat device, find it's serial by finding what serial number
+    and manufacturer is associated with it's port"""
 
     flow_controller_data = flow_controller.open_ports
     for key, item in flow_controller_data.items():
 
         ports = list(serial.tools.list_ports.comports())
         for port in ports:
-            if port.device == item[0].port:
+            if (port.device == item[0].port) & (port.manufacturer == "FTDI"):
                 found_serial_number = port.serial_number
                 return found_serial_number
     return None
@@ -57,7 +71,6 @@ class FlowControllerNode(Node):
             "flowrate_service": "set_flow_rate",
         }
 
-        # breakpoint()
         for key, value in default_param.items():
             if not self.has_parameter(key):
                 self.declare_parameter(key, value)
@@ -68,7 +81,7 @@ class FlowControllerNode(Node):
         if self.device_serial_number:
             self.device_serial_number = self.device_serial_number.replace("$", "")
 
-        with self.log_error_if_unavailable():
+        with self.exit_node_if_unable_to_open():
             if self.device_serial_number:
                 port_to_try = find_port_for_serial(self.device_serial_number)
                 if port_to_try is None:
@@ -80,6 +93,8 @@ class FlowControllerNode(Node):
             elif self.port_from_param:
                 self.flow_controller = FlowController(self.port_from_param)
                 found_serial_number = find_alicat_serial_from_port(self.flow_controller)
+                if found_serial_number is None:
+                    raise FileNotFoundError(b"Cannot find alicat device")
                 self.get_logger().info(
                     f"Opened Flow controller in port: {self.port_from_param} with s/n {found_serial_number}"
                 )
@@ -109,9 +124,11 @@ class FlowControllerNode(Node):
             )
 
     def flowrate_callback(self, flowrate_msg):
+        """Callback for topic subscription of the flowrate message"""
 
         raw_flowrate = flowrate_msg.flow_rate
 
+        # truncate negative flowrate requests
         if raw_flowrate < 0:
             apply_flowrate = 0
         else:
@@ -120,22 +137,31 @@ class FlowControllerNode(Node):
         self.flow_controller.set_flow_rate(apply_flowrate)
 
     def set_flow_rate_callback(self, request, response):
+        """Callback for the service call set_flow_rate"""
 
         self.flow_controller.set_flow_rate(request.goal_flow_rate)
-        time.sleep(0.1)
-        flow_status = self.flow_controller.get()
 
+        # give the alicat a short time to adjust to the new flowrate before
+        # returning the flow status
+        time.sleep(0.1)
+
+        # ask device for it's status
+        flow_status = self.flow_controller.get()
         response.measured_flow_rate = flow_status["volumetric_flow"]
-        response.measured_pressure = flow_status["volumetric_flow"]
+        response.measured_pressure = flow_status["pressure"]
         response.measured_temperature = flow_status["temperature"]
         return response
 
     @contextmanager
-    def log_error_if_unavailable(self):
-        """Log error when an error occurs while opening an mcc device either with or without serial number"""
+    def exit_node_if_unable_to_open(self):
+        """Log error and exit when an error occurs while opening an alicat_device"""
+
         try:
+            # opened device without errors
             yield
+
         except:
+            # error occured while opening, log an error and exit
             if self.device_serial_number:
                 self.get_logger().error(
                     f"Failed opening Alicat device with serial number: {self.device_serial_number}. Device is not found or it is already opened."

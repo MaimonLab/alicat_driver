@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 
+"""example_alicat_client
+parameters: 
+- flowrate_topic: name of topic to publish to 
+- flowrate_service: name of service to call 
+"""
+
 import rclpy
 from rclpy.node import Node
 import time
 import numpy as np
-
-
-# from strokeflow_interfaces.srv import SetFlowRate
 from alicat_driver_interfaces.srv import SetFlowRate
 from alicat_driver_interfaces.msg import FlowRate
-
-from typing import Optional
 
 
 class AirflowTestClient(Node):
@@ -22,7 +23,6 @@ class AirflowTestClient(Node):
             "flowrate_service": "set_flow_rate",
         }
 
-        # breakpoint()
         for key, value in default_param.items():
             if not self.has_parameter(key):
                 self.declare_parameter(key, value)
@@ -30,9 +30,7 @@ class AirflowTestClient(Node):
         flow_rate_service = self.get_parameter("flowrate_service").value
         self.flow_rate_client = self.create_client(SetFlowRate, flow_rate_service)
 
-        # while not self.flow_rate_client.wait_for_service(timeout_sec=1.0):
-        #     self.get_logger().info("flow rate service not available, waiting..")
-
+        # if service cannot be found, close this node after 10 or so seconds
         counter = 0
         while not self.flow_rate_client.wait_for_service(timeout_sec=3.0):
             self.get_logger().warn("flow rate service not available, waiting..")
@@ -47,12 +45,14 @@ class AirflowTestClient(Node):
         self.pub = self.create_publisher(FlowRate, flowrate_topic, 1)
 
     def set_flow_rate(self, goal_flow_rate=0.5):
+        """Call the flowrate service with the goal_flow_rate"""
         request = SetFlowRate.Request()
         request.goal_flow_rate = goal_flow_rate
         self.future = self.flow_rate_client.call_async(request)
         return self.future
 
     def publish_flow_rate(self, goal_flow_rate=0.5):
+        """Publish to the flowrate topic"""
         flowrate_msg = FlowRate()
         flowrate_msg.flow_rate = goal_flow_rate
         self.pub.publish(flowrate_msg)
@@ -63,13 +63,12 @@ def main(args=None):
 
     minimal_client = AirflowTestClient()
 
-    # for flow_rate in [0.3, 0.6, 0.8]:
+    # sweep over a range of flowrates by calling the flowrate service
     for flow_rate in np.arange(1, 0, -0.1):
         minimal_client.set_flow_rate(goal_flow_rate=flow_rate)
         time.sleep(1)
 
-    # for flow_rate in [0.3, 0.6, 0.8]:
-    # while True:
+    # sweep over the range of flowrates by publishing on flowrate topic
     for flow_rate in np.arange(0, 1, 0.1):
         minimal_client.publish_flow_rate(goal_flow_rate=flow_rate)
         time.sleep(1)
