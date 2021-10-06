@@ -1,7 +1,0 @@
-airflow_server:
-  ros__parameters:
-    device_serial_number: FT4U1ID2
-
-airflow_client:
-  ros__parameters:
-    config_found: True

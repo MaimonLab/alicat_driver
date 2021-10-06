@@ -1,21 +1,31 @@
 # alicat airflow driver
 
-This package is a ROS2 wrapper around the alicat python library for serial communcation to the alicat airflow controller.
+This package is a ROS2 wrapper around the alicat python library for serial communcation to the alicat massflow controller.
+
+# Installation
+
+Install the python library to interact with the alicat device:
+
+    pip3 install alicat
 
 # Example
 
-The example launch file starts the alicat airflow server and example client. You need to find out which port the alicat is connected to first, which you can do by typing :
+The example launch file starts the alicat airflow server and example client.
 
-    ls /dev/tty*
+    ros2 launch alicat_device example.launch.py
 
-It is usually at /dev/ttyUSB0, /dev/ttyUSB1, or higher if you have other things inserted into your usb.
+This will prompt you to pick one of the config files with parameters. You can open a device by:
 
-To find out which of the usb devices is, type:
+    1. A serial number (e.g. FT4TF9NT)
+    2. A serial port (e.g. /dev/ttyUSB0)
+    3. Neither, the node will try to find a connected device
 
-    udevadm info  /dev/ttyUSB*
+Using the serial number is most robust as ports are subject to change. You can find out the serial number and port of your device by plugging it in and running:
 
-Then look for the vendor "Future Technology Devices International, Ltd", which is apparently the name of the Alicat usb cable.
+    ros2 run alicat_device list_ports
 
-# installation
+Look for a device manufactured by FTDI.
 
-    pip3 install alicat
+# Release Notes:
+
+**0.1.0** This node is tested with an [2-SLPM Flow Controller](https://store.alicat.com/products/mc-2slpm-d?variant=36749145604249)

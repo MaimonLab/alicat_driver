@@ -1,0 +1,7 @@
+alicat_device:
+  ros__parameters:
+    flowrate_service: alicat_device/flowrate_service
+
+alicat_client:
+  ros__parameters:
+    flowrate_service: alicat_device/flowrate_service
