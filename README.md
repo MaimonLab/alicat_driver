@@ -7,6 +7,11 @@ This package is a ROS2 wrapper around the alicat python library for serial commu
 Install the python library to interact with the alicat device:
 
     pip3 install alicat
+    pip3 install pyserial
+
+Second, add user to dialout, to give serial read and write permission
+
+    sudo adduser $USER dialout
 
 # Example
 
