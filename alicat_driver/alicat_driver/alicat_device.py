@@ -60,14 +60,15 @@ def find_alicat_serial_from_port(flow_controller):
     return None
 
 
-class FlowControllerNode(Node):
+class AlicatNode(Node):
     def __init__(self):
-        super().__init__("flow_controller_node")
+        super().__init__("alicat_node")
         default_param = {
             "device_port": None,
             "device_serial_number": None,
             "subscribe_flowrate_topic": True,
-            "flowrate_topic": "alicat/flow_rate",
+            "goal_flowrate_topic": "alicat/goal_flow_rate",
+            "measured_flowrate_topic": "alicat/measured_flow_rate",
             "flowrate_service": "set_flow_rate",
         }
 
@@ -115,15 +116,32 @@ class FlowControllerNode(Node):
 
         flowrate_service = self.get_parameter("flowrate_service").value
 
-        self.create_service(SetFlowRate, flowrate_service, self.set_flow_rate_callback)
+        self.create_service(
+            SetFlowRate, flowrate_service, self.flowrate_service_callback
+        )
 
-        if self.get_parameter("subscribe_flowrate_topic").value:
-            flowrate_topic = self.get_parameter("flowrate_topic").value
-            self.create_subscription(
-                FlowRate, flowrate_topic, self.flowrate_callback, 1
-            )
+        goal_flowrate_topic = self.get_parameter("goal_flowrate_topic").value
+        self.create_subscription(
+            FlowRate, goal_flowrate_topic, self.goal_flowrate_callback, 1
+        )
 
-    def flowrate_callback(self, flowrate_msg):
+        measured_flowrate_topic = self.get_parameter("measured_flowrate_topic").value
+        self.pub_flowrate = self.create_publisher(FlowRate, measured_flowrate_topic, 1)
+
+        self.create_timer(1.0, self.measure_flowrate_callback)
+
+    def measure_flowrate_callback(self):
+
+        flowrate_msg = FlowRate()
+        flowrate_msg.header.stamp = self.get_clock().now().to_msg()
+
+        flow_status = self.flow_controller.get()
+        flowrate_msg.flow_rate = flow_status["volumetric_flow"]
+        # response.measured_pressure = flow_status["pressure"]
+        # response.measured_temperature = flow_status["temperature"]
+        self.pub_flowrate.publish(flowrate_msg)
+
+    def goal_flowrate_callback(self, flowrate_msg):
         """Callback for topic subscription of the flowrate message"""
 
         raw_flowrate = flowrate_msg.flow_rate
@@ -136,7 +154,7 @@ class FlowControllerNode(Node):
 
         self.flow_controller.set_flow_rate(apply_flowrate)
 
-    def set_flow_rate_callback(self, request, response):
+    def flowrate_service_callback(self, request, response):
         """Callback for the service call set_flow_rate"""
 
         self.flow_controller.set_flow_rate(request.goal_flow_rate)
@@ -182,7 +200,7 @@ class FlowControllerNode(Node):
 
 def main():
     rclpy.init()
-    flow_controller_node = FlowControllerNode()
+    flow_controller_node = AlicatNode()
     try:
         rclpy.spin(flow_controller_node)
     except KeyboardInterrupt:

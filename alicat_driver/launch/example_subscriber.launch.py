@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
@@ -43,43 +45,43 @@ def generate_launch_description():
         print(f"Error parsing your input, exiting")
         exit()
 
-    voltage_publisher = Node(
+    example_publisher = Node(
         package="alicat_driver",
-        executable="example_alicat_client",
-        name="alicat_client",
+        executable="example_flowrate_publisher",
+        name="flowrate_publisher",
         parameters=[selected_config_file],
     )
-    ld.add_action(voltage_publisher)
+    ld.add_action(example_publisher)
 
-    mcc_device = Node(
+    alicat_device = Node(
         package="alicat_driver",
         executable="alicat_device",
         name="alicat_device",
         parameters=[selected_config_file],
     )
-    ld.add_action(mcc_device)
+    ld.add_action(alicat_device)
 
-    # if a second_alicat_device is found in the config, add it to the launch
-    with open(selected_config_file, "r") as yaml_file:
+    # # if a second_alicat_device is found in the config, add it to the launch
+    # with open(selected_config_file, "r") as yaml_file:
 
-        example_config = ruamel_yaml.load(yaml_file)
-    if "second_alicat_device" in example_config:
-        second_mcc_device = Node(
-            package="alicat_driver",
-            executable="alicat_device",
-            name="second_alicat_device",
-            parameters=[selected_config_file],
-        )
-        ld.add_action(second_mcc_device)
+    #     example_config = ruamel_yaml.load(yaml_file)
+    # if "second_alicat_device" in example_config:
+    #     second_mcc_device = Node(
+    #         package="alicat_driver",
+    #         executable="alicat_device",
+    #         name="second_alicat_device",
+    #         parameters=[selected_config_file],
+    #     )
+    #     ld.add_action(second_mcc_device)
 
-    # if a second_alicat_client is found in the config, add it to the launch
-    if "second_alicat_client" in example_config:
-        second_mcc_device = Node(
-            package="alicat_driver",
-            executable="example_alicat_client",
-            name="second_alicat_client",
-            parameters=[selected_config_file],
-        )
-        ld.add_action(second_mcc_device)
+    # # if a second_alicat_client is found in the config, add it to the launch
+    # if "second_alicat_client" in example_config:
+    #     second_mcc_device = Node(
+    #         package="alicat_driver",
+    #         executable="example_alicat_client",
+    #         name="second_alicat_client",
+    #         parameters=[selected_config_file],
+    #     )
+    #     ld.add_action(second_mcc_device)
 
     return ld

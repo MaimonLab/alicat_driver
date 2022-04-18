@@ -24,6 +24,7 @@ setup(
         "console_scripts": [
             "alicat_device = alicat_driver.alicat_device:main",
             "example_alicat_client = alicat_driver.example_alicat_client:main",
+            "example_flowrate_publisher = alicat_driver.example_flowrate_publisher:main",
             "list_ports = alicat_driver.list_ports:main",
         ],
     },

@@ -11,15 +11,13 @@ from rclpy.node import Node
 import time
 import numpy as np
 from alicat_driver_interfaces.srv import SetFlowRate
-from alicat_driver_interfaces.msg import FlowRate
 
 
-class AirflowTestClient(Node):
+class FlowrateClient(Node):
     def __init__(self):
         super().__init__("airflow_test_client")
 
         default_param = {
-            "flowrate_topic": "alicat/flow_rate",
             "flowrate_service": "set_flow_rate",
         }
 
@@ -41,8 +39,8 @@ class AirflowTestClient(Node):
                 )
                 exit()
 
-        flowrate_topic = self.get_parameter("flowrate_topic").value
-        self.pub = self.create_publisher(FlowRate, flowrate_topic, 1)
+        self.create_timer(1.0, self.timer_callback)
+        self.flow_rate = 0.0
 
     def set_flow_rate(self, goal_flow_rate=0.5):
         """Call the flowrate service with the goal_flow_rate"""
@@ -51,30 +49,25 @@ class AirflowTestClient(Node):
         self.future = self.flow_rate_client.call_async(request)
         return self.future
 
-    def publish_flow_rate(self, goal_flow_rate=0.5):
-        """Publish to the flowrate topic"""
-        flowrate_msg = FlowRate()
-        flowrate_msg.flow_rate = goal_flow_rate
-        self.pub.publish(flowrate_msg)
+    def timer_callback(self):
+        self.set_flow_rate(goal_flow_rate=self.flow_rate)
+
+        # increment flow rate, modulo 1
+        self.flow_rate += 0.1
+        self.flow_rate = self.flow_rate % 1.0
 
 
 def main(args=None):
     rclpy.init(args=args)
 
-    minimal_client = AirflowTestClient()
-
-    # sweep over a range of flowrates by calling the flowrate service
-    for flow_rate in np.arange(1, 0, -0.1):
-        minimal_client.set_flow_rate(goal_flow_rate=flow_rate)
-        time.sleep(1)
-
-    # sweep over the range of flowrates by publishing on flowrate topic
-    for flow_rate in np.arange(0, 1, 0.1):
-        minimal_client.publish_flow_rate(goal_flow_rate=flow_rate)
-        time.sleep(1)
-
-    minimal_client.destroy_node()
-    rclpy.shutdown()
+    # flow_controller_node = FlowControllerNode()
+    minimal_client = FlowrateClient()
+    try:
+        rclpy.spin(minimal_client)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":
