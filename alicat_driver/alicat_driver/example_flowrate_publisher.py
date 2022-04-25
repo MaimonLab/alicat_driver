@@ -16,7 +16,7 @@ class FlowratePublisher(Node):
         super().__init__("flowrate_publisher")
 
         default_param = {
-            "goal_flowrate_topic": "alicat/goal_flow_rate",
+            "goal_flowrate_topic": "alicat/goal_flowrate",
         }
 
         for key, value in default_param.items():
@@ -26,15 +26,15 @@ class FlowratePublisher(Node):
         flowrate_topic = self.get_parameter("goal_flowrate_topic").value
         self.pub = self.create_publisher(FlowRate, flowrate_topic, 1)
 
-        self.create_timer(1.0, self.publish_flow_rate)
+        self.create_timer(1.0, self.publish_flowrate)
         self.flowrate = 1.0
 
-    def publish_flow_rate(self):
+    def publish_flowrate(self):
         """Publish to the flowrate topic"""
         flowrate_msg = FlowRate()
         flowrate_msg.header.stamp = self.get_clock().now().to_msg()
 
-        flowrate_msg.flow_rate = self.flowrate
+        flowrate_msg.flowrate = self.flowrate
         self.pub.publish(flowrate_msg)
 
         self.flowrate -= 0.1

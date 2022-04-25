@@ -2,7 +2,13 @@ alicat_device:
   ros__parameters:
     flowrate_service: alicat_device/flowrate_service
     device_port: /dev/ttyUSB0
+    goal_flowrate_topic: alicat/goal_flowrate
+    measured_flowrate_topic: alicat/measured_flowrate
 
 alicat_client:
   ros__parameters:
     flowrate_service: alicat_device/flowrate_service
+
+flowrate_publisher:
+  ros__parameters:
+    goal_flowrate_topic: alicat/goal_flowrate

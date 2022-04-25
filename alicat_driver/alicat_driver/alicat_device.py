@@ -5,7 +5,7 @@ ROS2 node to send flowrate on an alicat flow rate device.
 Parameters: 
 - device_port: port, e.g. /dev/ttyUSB0 to open the device. Serial number is prefered since ports change.
 - device_serial_number: serial number of the device to open, takes precedence over device_port.
-- subscribe_flow_rate: option to open a subscription, if false the flowrate can only be set with services. 
+- subscribe_flowrate: option to open a subscription, if false the flowrate can only be set with services. 
 - flowrate_topic: topic name that the node will subscribe to. 
 - flowrate_service: service name that the node will provide. 
 """
@@ -66,9 +66,8 @@ class AlicatNode(Node):
         default_param = {
             "device_port": None,
             "device_serial_number": None,
-            "subscribe_flowrate_topic": True,
-            "goal_flowrate_topic": "alicat/goal_flow_rate",
-            "measured_flowrate_topic": "alicat/measured_flow_rate",
+            "goal_flowrate_topic": "alicat/goal_flowrate",
+            "measured_flowrate_topic": "alicat/measured_flowrate",
             "flowrate_service": "set_flow_rate",
         }
 
@@ -136,15 +135,15 @@ class AlicatNode(Node):
         flowrate_msg.header.stamp = self.get_clock().now().to_msg()
 
         flow_status = self.flow_controller.get()
-        flowrate_msg.flow_rate = flow_status["volumetric_flow"]
-        # response.measured_pressure = flow_status["pressure"]
-        # response.measured_temperature = flow_status["temperature"]
+        flowrate_msg.flowrate = flow_status["volumetric_flow"]
+        flowrate_msg.pressure = flow_status["pressure"]
+        flowrate_msg.temperature = flow_status["temperature"]
         self.pub_flowrate.publish(flowrate_msg)
 
     def goal_flowrate_callback(self, flowrate_msg):
         """Callback for topic subscription of the flowrate message"""
 
-        raw_flowrate = flowrate_msg.flow_rate
+        raw_flowrate = flowrate_msg.flowrate
 
         # truncate negative flowrate requests
         if raw_flowrate < 0:
@@ -157,7 +156,7 @@ class AlicatNode(Node):
     def flowrate_service_callback(self, request, response):
         """Callback for the service call set_flow_rate"""
 
-        self.flow_controller.set_flow_rate(request.goal_flow_rate)
+        self.flow_controller.set_flow_rate(request.goal_flowrate)
 
         # give the alicat a short time to adjust to the new flowrate before
         # returning the flow status
@@ -165,7 +164,7 @@ class AlicatNode(Node):
 
         # ask device for it's status
         flow_status = self.flow_controller.get()
-        response.measured_flow_rate = flow_status["volumetric_flow"]
+        response.measured_flowrate = flow_status["volumetric_flow"]
         response.measured_pressure = flow_status["pressure"]
         response.measured_temperature = flow_status["temperature"]
         return response
