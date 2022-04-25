@@ -1,10 +1,14 @@
 alicat_device:
   ros__parameters:
+    device_serial_number: FT4TF9NT
+    goal_flowrate_topic: alicat/goal_flowrate
+    measured_flowrate_topic: alicat/measured_flowrate
     flowrate_service: alicat_device/flowrate_service
-    # device_port: /dev/ttyUSB0
-    device_serial_number: FT4U1ID2
-    # device_serial_number: FT4TF9NT
 
 alicat_client:
   ros__parameters:
     flowrate_service: alicat_device/flowrate_service
+
+flowrate_publisher:
+  ros__parameters:
+    goal_flowrate_topic: alicat/goal_flowrate

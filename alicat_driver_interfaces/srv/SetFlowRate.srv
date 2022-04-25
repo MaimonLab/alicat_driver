@@ -1,5 +1,5 @@
-float32 goal_flow_rate 
+float32 goal_flowrate 
 ---
-float32 measured_flow_rate 
+float32 measured_flowrate 
 float32 measured_pressure
 float32 measured_temperature
