@@ -129,27 +129,16 @@ class AlicatNode(Node):
 
         self.flow_controller.set_flow_rate(0.0)
 
-        self.create_timer(1.0, self.measure_flowrate_callback)
+        # self.create_timer(1.0, self.measure_flowrate_callback)
 
     def on_shutdown(self):
 
         self.flow_controller.set_flow_rate(0.0)
 
-    def measure_flowrate_callback(self):
-
-        flowrate_msg = FlowRate()
-        flowrate_msg.header.stamp = self.get_clock().now().to_msg()
-
-        flow_status = self.flow_controller.get()
-        flowrate_msg.flowrate = flow_status["volumetric_flow"]
-        flowrate_msg.pressure = flow_status["pressure"]
-        flowrate_msg.temperature = flow_status["temperature"]
-        self.pub_flowrate.publish(flowrate_msg)
-
-    def goal_flowrate_callback(self, flowrate_msg):
+    def goal_flowrate_callback(self, goal_flowrate_msg):
         """Callback for topic subscription of the flowrate message"""
 
-        raw_flowrate = flowrate_msg.flowrate
+        raw_flowrate = goal_flowrate_msg.flowrate
 
         # truncate negative flowrate requests
         if raw_flowrate < 0:
@@ -158,6 +147,15 @@ class AlicatNode(Node):
             apply_flowrate = raw_flowrate
 
         self.flow_controller.set_flow_rate(apply_flowrate)
+
+        actual_flowrate_msg = FlowRate()
+        actual_flowrate_msg.header = goal_flowrate_msg.header
+
+        flow_status = self.flow_controller.get()
+        actual_flowrate_msg.flowrate = flow_status["volumetric_flow"]
+        actual_flowrate_msg.pressure = flow_status["pressure"]
+        actual_flowrate_msg.temperature = flow_status["temperature"]
+        self.pub_flowrate.publish(actual_flowrate_msg)
 
     def flowrate_service_callback(self, request, response):
         """Callback for the service call set_flow_rate"""
