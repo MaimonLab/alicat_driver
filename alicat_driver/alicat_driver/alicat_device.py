@@ -127,7 +127,13 @@ class AlicatNode(Node):
         measured_flowrate_topic = self.get_parameter("measured_flowrate_topic").value
         self.pub_flowrate = self.create_publisher(FlowRate, measured_flowrate_topic, 1)
 
+        self.flow_controller.set_flow_rate(0.0)
+
         self.create_timer(1.0, self.measure_flowrate_callback)
+
+    def on_shutdown(self):
+
+        self.flow_controller.set_flow_rate(0.0)
 
     def measure_flowrate_callback(self):
 
@@ -205,6 +211,7 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
+        flow_controller_node.on_shutdown()
         rclpy.shutdown()
 
 
