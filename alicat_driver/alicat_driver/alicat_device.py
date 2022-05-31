@@ -152,7 +152,7 @@ class AlicatNode(Node):
         actual_flowrate_msg.header = goal_flowrate_msg.header
 
         flow_status = self.flow_controller.get()
-        actual_flowrate_msg.flowrate = flow_status["volumetric_flow"]
+        actual_flowrate_msg.flowrate = flow_status["mass_flow"]
         actual_flowrate_msg.pressure = flow_status["pressure"]
         actual_flowrate_msg.temperature = flow_status["temperature"]
         self.pub_flowrate.publish(actual_flowrate_msg)
@@ -168,7 +168,7 @@ class AlicatNode(Node):
 
         # ask device for it's status
         flow_status = self.flow_controller.get()
-        response.measured_flowrate = flow_status["volumetric_flow"]
+        response.measured_flowrate = flow_status["mass_flow"]
         response.measured_pressure = flow_status["pressure"]
         response.measured_temperature = flow_status["temperature"]
         return response
