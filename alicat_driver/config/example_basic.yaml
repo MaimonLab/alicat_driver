@@ -3,6 +3,7 @@ alicat_device:
     goal_flowrate_topic: alicat/goal_flowrate
     measured_flowrate_topic: alicat/measured_flowrate
     flowrate_service: alicat_device/flowrate_service
+    output_filename: /home/maimon/temp/alicat_device
 
 alicat_client:
   ros__parameters:
