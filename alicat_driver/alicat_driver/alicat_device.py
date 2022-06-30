@@ -19,6 +19,9 @@ import time
 import serial.tools.list_ports
 from typing import Optional
 from contextlib import contextmanager
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy
+
+from alicat_driver.csv_saver import CSVWriter
 
 
 def find_port_for_serial(serial_id: str) -> Optional[str]:
@@ -69,6 +72,8 @@ class AlicatNode(Node):
             "goal_flowrate_topic": "alicat/goal_flowrate",
             "measured_flowrate_topic": "alicat/measured_flowrate",
             "flowrate_service": "set_flow_rate",
+            "output_filename": None,
+            "save_data_to_csv": True,
         }
 
         for key, value in default_param.items():
@@ -119,16 +124,40 @@ class AlicatNode(Node):
             SetFlowRate, flowrate_service, self.flowrate_service_callback
         )
 
+        qos_subscriber = QoSProfile(
+            depth=1,
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+        )
+
         goal_flowrate_topic = self.get_parameter("goal_flowrate_topic").value
         self.create_subscription(
-            FlowRate, goal_flowrate_topic, self.goal_flowrate_callback, 1
+            FlowRate, goal_flowrate_topic, self.goal_flowrate_callback, qos_subscriber
+        )
+
+        qos_publisher = QoSProfile(
+            depth=1,
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
         )
 
         measured_flowrate_topic = self.get_parameter("measured_flowrate_topic").value
-        self.pub_flowrate = self.create_publisher(FlowRate, measured_flowrate_topic, 1)
+        self.pub_flowrate = self.create_publisher(
+            FlowRate, measured_flowrate_topic, qos_publisher
+        )
 
         self.flow_controller.set_flow_rate(0.0)
 
+        if (
+            self.get_parameter("output_filename").value
+            and self.get_parameter("save_data_to_csv").value
+        ):
+            topic_extension = measured_flowrate_topic.split("/")[-1]
+            output_filename = (
+                f"{self.get_parameter('output_filename').value}_{topic_extension}.csv"
+            )
+
+            self.csv_writer = CSVWriter(output_filename)
+        else:
+            self.csv_writer = None
         # self.create_timer(1.0, self.measure_flowrate_callback)
 
     def on_shutdown(self):
@@ -156,6 +185,8 @@ class AlicatNode(Node):
         actual_flowrate_msg.pressure = flow_status["pressure"]
         actual_flowrate_msg.temperature = flow_status["temperature"]
         self.pub_flowrate.publish(actual_flowrate_msg)
+        if self.csv_writer:
+            self.csv_writer.save_message(actual_flowrate_msg)
 
     def flowrate_service_callback(self, request, response):
         """Callback for the service call set_flow_rate"""
