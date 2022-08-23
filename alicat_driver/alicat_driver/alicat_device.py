@@ -19,8 +19,11 @@ import time
 import serial.tools.list_ports
 from typing import Optional
 from contextlib import contextmanager
+
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy
-from alicat_driver.csv_saver import CSVWriter
+
+from event_data_logging import CSVWriter
+import signal
 
 
 def find_port_for_serial(serial_id: str) -> Optional[str]:
@@ -73,6 +76,7 @@ class AlicatNode(Node):
             "flowrate_service": "set_flow_rate",
             "output_filename": None,
             "save_data_to_csv": True,
+            "csv_saving_rate_hz": 5,
         }
 
         for key, value in default_param.items():
@@ -142,6 +146,10 @@ class AlicatNode(Node):
             FlowRate, measured_flowrate_topic, qos_publisher_best_effort
         )
 
+        self.get_logger().info(
+            f"output filename: {self.get_parameter('output_filename').value}"
+        )
+
         if (
             self.get_parameter("output_filename").value
             and self.get_parameter("save_data_to_csv").value
@@ -151,20 +159,30 @@ class AlicatNode(Node):
                 f"{self.get_parameter('output_filename').value}_{topic_extension}.csv"
             )
 
-            self.csv_writer = CSVWriter(output_filename)
+            self.csv_writer = CSVWriter(
+                output_filename,
+                header=["timestamp", "massflow", "pressure", "temperature"],
+            )
         else:
             self.get_logger().warn(f"No output filename specified, not saving data")
             self.csv_writer = None
 
         self.flow_controller.set_flow_rate(0.0)
 
-        self.create_timer(0.1, self.measure_flowrate_callback)
+        csv_saving_rate = self.get_parameter("csv_saving_rate_hz").value
+        self.create_timer(1 / csv_saving_rate, self.measure_flowrate_callback)
+
+        signal.signal(signal.SIGINT, self.signal_interrupt)
+
+    def signal_interrupt(self, frame, what):
+        # catch signal to explicitly call shutdown while node is still alive
+        self.on_shutdown()
+        self.destroy_node()
+        exit()
 
     def on_shutdown(self):
-
         self.flow_controller.set_flow_rate(0.0)
-        self.get_logger().info("Setting alicat to 0")
-        time.sleep(0.05)
+        self.get_logger().info(f"Alicat flowrate set to 0")
 
     def goal_flowrate_callback(self, goal_flowrate_msg):
         """Callback for topic subscription of the flowrate message"""
@@ -179,17 +197,6 @@ class AlicatNode(Node):
 
         self.flow_controller.set_flow_rate(apply_flowrate)
 
-        # actual_flowrate_msg = FlowRate()
-        # actual_flowrate_msg.header = goal_flowrate_msg.header
-
-        # flow_status = self.flow_controller.get()
-        # actual_flowrate_msg.flowrate = flow_status["mass_flow"]
-        # actual_flowrate_msg.pressure = flow_status["pressure"]
-        # actual_flowrate_msg.temperature = flow_status["temperature"]
-        # self.pub_flowrate.publish(actual_flowrate_msg)
-        # if self.csv_writer:
-        #     self.csv_writer.save_message(actual_flowrate_msg)
-
     def measure_flowrate_callback(self):
         """Callback for topic subscription of the flowrate message"""
 
@@ -202,8 +209,17 @@ class AlicatNode(Node):
         actual_flowrate_msg.pressure = flow_status["pressure"]
         actual_flowrate_msg.temperature = flow_status["temperature"]
         self.pub_flowrate.publish(actual_flowrate_msg)
+
+        data_line = [
+            # int(actual_flowrate_msg.header.stamp.sec * 1e9)
+            # + actual_flowrate_msg.header.stamp.nanosec,
+            rclpy.time.Time.from_msg(actual_flowrate_msg.header.stamp).nanoseconds,
+            flow_status["mass_flow"],
+            flow_status["pressure"],
+            flow_status["temperature"],
+        ]
         if self.csv_writer:
-            self.csv_writer.save_message(actual_flowrate_msg)
+            self.csv_writer.save_line(data_line)
 
     def flowrate_service_callback(self, request, response):
         """Callback for the service call set_flow_rate"""
@@ -257,7 +273,7 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
-        flow_controller_node.on_shutdown()
+        # flow_controller_node.on_shutdown()
         rclpy.shutdown()
 
 

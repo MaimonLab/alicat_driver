@@ -4,14 +4,13 @@ This package is a ROS2 wrapper around the alicat python library for serial commu
 
 ## Installation
 
-Install the python library to interact with the alicat device:
+Clone the package and run the install script:
 
-    pip3 install alicat
-    pip3 install pyserial
-
-Second, add user to dialout, to give serial read and write permission
-
-    sudo adduser $USER dialout
+    cd ~/maimon_ws/src
+    git clone git@github.com:MaimonLab/alicat_driver.git
+    cd alicat_driver
+    git checkout install-script
+    ./install_dependencies.sh
 
 ## Use case
 
