@@ -21,7 +21,8 @@ from typing import Optional
 from contextlib import contextmanager
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy
 
-from alicat_driver.csv_saver import CSVWriter
+from event_data_logging import CSVWriter
+import signal
 
 
 def find_port_for_serial(serial_id: str) -> Optional[str]:
@@ -74,6 +75,7 @@ class AlicatNode(Node):
             "flowrate_service": "set_flow_rate",
             "output_filename": None,
             "save_data_to_csv": True,
+            "csv_saving_rate_hz": 5,
         }
 
         for key, value in default_param.items():
@@ -134,14 +136,23 @@ class AlicatNode(Node):
             FlowRate, goal_flowrate_topic, self.goal_flowrate_callback, qos_subscriber
         )
 
-        qos_publisher = QoSProfile(
-            depth=1,
-            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+        qos_subscriber_best_effort = QoSProfile(
+            depth=1, reliability=QoSReliabilityPolicy.BEST_EFFORT
+        )
+        goal_flowrate_topic = self.get_parameter("goal_flowrate_topic").value
+        self.create_subscription(
+            FlowRate,
+            goal_flowrate_topic,
+            self.goal_flowrate_callback,
+            qos_subscriber_best_effort,
         )
 
+        qos_publisher_best_effort = QoSProfile(
+            depth=1, reliability=QoSReliabilityPolicy.BEST_EFFORT
+        )
         measured_flowrate_topic = self.get_parameter("measured_flowrate_topic").value
         self.pub_flowrate = self.create_publisher(
-            FlowRate, measured_flowrate_topic, qos_publisher
+            FlowRate, measured_flowrate_topic, qos_publisher_best_effort
         )
 
         self.flow_controller.set_flow_rate(0.0)
@@ -155,14 +166,30 @@ class AlicatNode(Node):
                 f"{self.get_parameter('output_filename').value}_{topic_extension}.csv"
             )
 
-            self.csv_writer = CSVWriter(output_filename)
+            self.csv_writer = CSVWriter(
+                output_filename,
+                header=["timestamp", "massflow", "pressure", "temperature"],
+            )
         else:
+            self.get_logger().warn(f"No output filename specified, not saving data")
             self.csv_writer = None
-        # self.create_timer(1.0, self.measure_flowrate_callback)
-
-    def on_shutdown(self):
 
         self.flow_controller.set_flow_rate(0.0)
+
+        csv_saving_rate = self.get_parameter("csv_saving_rate_hz").value
+        self.create_timer(1 / csv_saving_rate, self.measure_flowrate_callback)
+
+        signal.signal(signal.SIGINT, self.signal_interrupt)
+
+    def signal_interrupt(self, frame, what):
+        # catch signal to explicitly call shutdown while node is still alive
+        self.on_shutdown()
+        self.destroy_node()
+        exit()
+
+    def on_shutdown(self):
+        self.flow_controller.set_flow_rate(0.0)
+        self.get_logger().info(f"Alicat flowrate set to 0")
 
     def goal_flowrate_callback(self, goal_flowrate_msg):
         """Callback for topic subscription of the flowrate message"""
@@ -177,16 +204,27 @@ class AlicatNode(Node):
 
         self.flow_controller.set_flow_rate(apply_flowrate)
 
+    def measure_flowrate_callback(self):
+        """Callback for topic subscription of the flowrate message"""
+
         actual_flowrate_msg = FlowRate()
-        actual_flowrate_msg.header = goal_flowrate_msg.header
+        # actual_flowrate_msg.header = goal_flowrate_msg.header
+        actual_flowrate_msg.header.stamp = self.get_clock().now().to_msg()
 
         flow_status = self.flow_controller.get()
         actual_flowrate_msg.flowrate = flow_status["mass_flow"]
         actual_flowrate_msg.pressure = flow_status["pressure"]
         actual_flowrate_msg.temperature = flow_status["temperature"]
         self.pub_flowrate.publish(actual_flowrate_msg)
+
+        data_line = [
+            rclpy.time.Time.from_msg(actual_flowrate_msg.header.stamp).nanoseconds,
+            flow_status["mass_flow"],
+            flow_status["pressure"],
+            flow_status["temperature"],
+        ]
         if self.csv_writer:
-            self.csv_writer.save_message(actual_flowrate_msg)
+            self.csv_writer.save_line(data_line)
 
     def flowrate_service_callback(self, request, response):
         """Callback for the service call set_flow_rate"""
@@ -240,7 +278,7 @@ def main():
     except KeyboardInterrupt:
         pass
     finally:
-        flow_controller_node.on_shutdown()
+        # flow_controller_node.on_shutdown()
         rclpy.shutdown()
 
 
