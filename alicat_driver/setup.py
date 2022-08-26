@@ -19,7 +19,6 @@ setup(
     maintainer_email="tlmohren@gmail.com",
     description="Node to interact with Alicat device, tested with MC-series",
     license="LGPLv3",
-    requires=["alicat", "ruamel.yaml", "event_data_logging"],
     tests_require=["pytest"],
     entry_points={
         "console_scripts": [
