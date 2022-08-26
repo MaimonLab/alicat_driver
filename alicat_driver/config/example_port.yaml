@@ -4,6 +4,7 @@ alicat_device:
     device_port: /dev/ttyUSB0
     goal_flowrate_topic: alicat/goal_flowrate
     measured_flowrate_topic: alicat/measured_flowrate
+    output_filename: /home/maimon/temp/alicat_device
 
 alicat_client:
   ros__parameters:
