@@ -9,7 +9,6 @@ Clone the package and run the install script:
     cd ~/maimon_ws/src
     git clone git@github.com:MaimonLab/alicat_driver.git
     cd alicat_driver
-    git checkout install-script
     ./install_dependencies.sh
 
 ## Use case
