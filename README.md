@@ -96,3 +96,39 @@ df_alicat.plot(
 )
 ax.legend(); plt.show()
 ```
+
+## Calibration 
+
+
+The Alicat devices are calibrated at the factory, but after a lot of usage, the original PID parameters might now result in transient oscillations or even instability. If this is the case, follow the [alicat PID tuning guide](https://www.alicat.com/using-your-alicat/pid-tuning/) to adjust the parameters. Note that the back pressure should be high enough to get to all levels (5-60 PSI). In operation, always use aja cable that allows you to see actual flowrate, not just analog in.
+
+**When to tune?** Alicat has transient oscillations or never settles . Steps: 
+
+- Give 1 Hz step function input
+- Adjust P values in PID control loop while reading out flowrate response
+
+
+<img src="figs/alicat_cable.jpg" height=300px></img> <img src="figs/alicat_calibration_rig.jpg" height=300px></img>
+**Fig1. Alicat cable with Command (Cmd) and Analog out (Aout), Fig2. Tools for Alicat calibration.**
+
+
+### Example calibration
+
+In this case, the alicat was unstable. I reduced the p value until it stabilized
+
+<img src="figs/alicat_p2300_osc.jpg" width=200px></img>
+
+**Fig3. p=2300**
+
+<img src="figs/alicat_p2000_osc.jpg" width=200px></img>
+
+**Fig4. p=2000**
+
+<img src="figs/alicat_p1300_osc.jpg" width=200px></img>
+
+**Fig5. p=1300**
+
+<img src="figs/alicat_p600_osc.jpg" width=200px></img>
+
+**Fig6. p=600**
+
